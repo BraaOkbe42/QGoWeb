@@ -1,0 +1,50 @@
+body {
+    background: #f5f5f5;
+    margin-top: 20px;
+}
+
+.career-form {
+    background-color: #4e63d7;
+    border-radius: 5px;
+    padding: 0 16px;
+    color: #fff;
+}
+
+.career-form .form-control {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 0;
+    padding: 12px 15px;
+    color: #fff;
+}
+
+.career-form .custom-select {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 0;
+    padding: 12px 15px;
+    color: #fff;
+    border-radius: 5px;
+}
+
+.filter-result .job-box {
+    background: #fff;
+    box-shadow: 0 0 35px 0 rgba(130, 130, 130, 0.2);
+    border-radius: 10px;
+    padding: 10px 35px;
+}
+
+.job-box .img-holder {
+    height: 65px;
+    width: 65px;
+    background: linear-gradient(to right, rgba(78, 99, 215, 0.9), #5a85dd);
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 65px;
+}
+
+.pagination-reset {
+    justify-content: center;
+}

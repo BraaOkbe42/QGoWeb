@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Booking</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .schedule-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .time-slots {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        .time-slot {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .time-slot.booked {
+            background-color: #dc3545;
+            cursor: not-allowed;
+        }
+        .time-slot:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<!-- <div class="container mt-5">
+    <h1>Book an Appointment</h1>
+    <form id="appointmentForm" method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="business">Select Business</label>
+            <select id="business" name="business_name" class="form-control" required>
+                <option value="" disabled selected>Select a business</option>
+                {% for business_name, branches in businesses.items %}
+                    <option value="{{ business_name }}">{{ business_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="branch">Select Branch</label>
+            <select id="branch" name="branch_name" class="form-control" disabled required>
+                <option value="" disabled selected>Select a branch</option>
+            </select>
+        </div>
+        <div class="schedule-container">
+            <h4 id="dateDisplay">Working Hours</h4>
+            <div class="time-slots" id="timeSlots">Select a branch to view available slots.</div>
+        </div>
+    </form>
+</div> -->
+<div class="container mt-5">
+    <h1>Book an Appointment</h1>
+    <form id="appointmentForm" method="post">
+        {% csrf_token %}
+
+        <!-- Business Dropdown -->
+        <div class="form-group">
+            <label for="business">Select Business</label>
+            <select id="business" name="business_name" class="form-control" required>
+                <option value="" disabled selected>Select a business</option>
+                {% for business_name, branches in businesses.items %}
+                    <option value="{{ business_name }}">{{ business_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Branch Dropdown -->
+        <div class="form-group">
+            <label for="branch">Select Branch</label>
+            <select id="branch" name="branch_name" class="form-control" disabled required>
+                <option value="" disabled selected>Select a branch</option>
+            </select>
+        </div>
+
+        <!-- Schedule Display -->
+        <div class="schedule-container">
+            <div class="schedule-box">
+                <div class="nav-button left" id="prevDay">&laquo;</div>
+                <h4 id="dateDisplay">Select a branch to view available slots</h4>
+                <div class="time-slots" id="timeSlots"></div>
+                <div class="nav-button right" id="nextDay">&raquo;</div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary mt-3">Book Appointment</button>
+    </form>
+</div>
+<script>
+$(document).ready(function () {
+    let branchWorkingHours = [];
+    let bookedSlots = [];
+    const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    let currentDate = new Date();
+
+    const generateSlots = (fromTime, toTime, interval) => {
+        const slots = [];
+        const from = new Date(`1970-01-01T${fromTime}:00Z`);
+        const to = new Date(`1970-01-01T${toTime}:00Z`);
+        while (from < to) {
+            slots.push(new Date(from).toTimeString().slice(0, 5));
+            from.setMinutes(from.getMinutes() + interval);
+        }
+        return slots;
+    };
+
+    const updateSchedule = () => {
+        const dateDisplay = $("#dateDisplay");
+        const timeSlots = $("#timeSlots");
+
+        // Update the date display
+        const dayName = daysOfWeek[currentDate.getDay()];
+        dateDisplay.text(`${dayName}, ${currentDate.toDateString()}`);
+
+        // Clear time slots
+        timeSlots.empty();
+
+        // Filter working hours for the current day
+        const workingHours = branchWorkingHours.filter(wh => wh.days.includes(dayName));
+        if (workingHours.length === 0) {
+            timeSlots.append(`<div>No available slots for this day.</div>`);
+            return;
+        }
+
+        // Generate and display time slots
+        workingHours.forEach(wh => {
+            const slots = generateSlots(wh.from_time, wh.to_time, 15);
+            slots.forEach(slot => {
+                const slotKey = `${currentDate.toDateString()} ${slot}`;
+                const slotElement = $(`<div class="time-slot">${slot}</div>`);
+                if (bookedSlots.includes(slotKey)) {
+                    slotElement.addClass("booked");
+                } else {
+                    slotElement.on("click", function () {
+                        alert(`You selected ${slot} on ${currentDate.toDateString()}`);
+                        // Handle booking logic here
+                    });
+                }
+                timeSlots.append(slotElement);
+            });
+        });
+    };
+
+    $("#business").on("change", function () {
+        const businessName = $(this).val();
+        $("#branch").empty().append('<option value="" disabled selected>Loading branches...</option>').prop("disabled", true);
+
+        $.post("{% url 'get_branch_details' %}", {
+            business_name: businessName,
+            csrfmiddlewaretoken: "{{ csrf_token }}"
+        }, function (data) {
+            $("#branch").empty().append('<option value="" disabled selected>Select a branch</option>');
+            data.branches.forEach(branch => {
+                $("#branch").append(
+                    `<option value="${branch.branch_name}" data-hours='${JSON.stringify(branch.working_hours)}'>${branch.branch_name}</option>`
+                );
+            });
+            $("#branch").prop("disabled", false);
+        });
+    });
+
+    $("#branch").on("change", function () {
+        const selectedBranch = $(this).find(":selected");
+        branchWorkingHours = JSON.parse(selectedBranch.attr("data-hours"));
+
+        $.post("{% url 'get_booked_slots' %}", {
+            branch_name: selectedBranch.val(),
+            csrfmiddlewaretoken: "{{ csrf_token }}"
+        }, function (data) {
+            bookedSlots = data.booked_slots.map(slot => `${slot.day} ${slot.time}`);
+            updateSchedule();
+        });
+    });
+
+    // Navigation buttons for previous and next days
+    $("#prevDay").on("click", function () {
+        currentDate.setDate(currentDate.getDate() - 1);
+        updateSchedule();
+    });
+
+    $("#nextDay").on("click", function () {
+        currentDate.setDate(currentDate.getDate() + 1);
+        updateSchedule();
+    });
+
+
+
+
+    $("#business").on("change", function () {
+        const businessName = $(this).val();
+        console.log("Selected business:", businessName);
+
+        $("#branch").empty().append('<option value="" disabled selected>Loading branches...</option>').prop("disabled", true);
+
+        $.post("{% url 'get_branch_details' %}", {
+            business_name: businessName,
+            csrfmiddlewaretoken: "{{ csrf_token }}"
+        }, function (data) {
+            console.log("Branch details received:", data);
+
+            $("#branch").empty().append('<option value="" disabled selected>Select a branch</option>');
+            data.branches.forEach(branch => {
+                $("#branch").append(
+                    `<option value="${branch.branch_name}" data-hours='${JSON.stringify(branch.working_hours)}'>${branch.branch_name}</option>`
+                );
+            });
+            $("#branch").prop("disabled", false);
+        }).fail(function (error) {
+            console.error("Error fetching branches:", error);
+        });
+    });
+
+    $("#branch").on("change", function () {
+        const selectedBranch = $(this).find(":selected");
+        console.log("Selected branch:", selectedBranch.val());
+
+        branchWorkingHours = JSON.parse(selectedBranch.attr("data-hours"));
+        console.log("Working hours for branch:", branchWorkingHours);
+
+        $.post("{% url 'get_booked_slots' %}", {
+            branch_name: selectedBranch.val(),
+            csrfmiddlewaretoken: "{{ csrf_token }}"
+        }, function (data) {
+            console.log("Booked slots received:", data);
+
+            bookedSlots = data.booked_slots.map(slot => slot.time); // Extract only times
+            updateSchedule();
+        }).fail(function (error) {
+            console.error("Error fetching booked slots:", error);
+        });
+    });
+});
+
+
+</script>
+
+</body>
+</html>

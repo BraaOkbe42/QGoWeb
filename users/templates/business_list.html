@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business and Branch List</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Businesses and Branches</h1>
+        <hr>
+        <div class="row">
+            {% for business in businesses %}
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="card-title">{{ business.business_name }}</h4>
+                    </div>
+                    <div class="card-body">
+                        <h5>Branches:</h5>
+                        <ul>
+                            {% for branch in business.branches %}
+                            <li>
+                                <strong>{{ branch.branch_name }}</strong>
+                                <ul>
+                                    {% for hours in branch.working_hours %}
+                                    <li>
+                                        <strong>Days:</strong> {{ hours.days|join:", " }}<br>
+                                        <strong>Hours:</strong> {{ hours.from_time }} - {{ hours.to_time }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
